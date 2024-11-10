@@ -5,9 +5,10 @@
       <input @keyup.enter="calc()" type="text" v-model="result" placeholder="0" id="calc__field">
       <button @click="input(num)" class="cell num" v-for="num in numbers" :key="num">{{num}}</button>
       <button @click="input(op)" class="cell op" v-for="op in operations" :key="op">{{op}}</button>
-      <button @click="input('**')" class="cell op">^</button>
-      <button @click="reset()" class="cell op">R</button>
-      <button @click="calc()" class="cell op">=</button>
+      <button @click="input(',')" class="cell op">,</button> 
+      <!-- <button @click="input('**')" class="cell op">^</button> -->
+      <button @click="reset()" class="cell op" title="Стереть">R</button>
+      <button @click="calc()" class="cell op" id="yellow" title="Считать">=</button>
       <div v-if="errorMessage" class="error-message">
         {{ errorMessage }}
       </div>
@@ -23,7 +24,7 @@ export default {
       result: '',
       errorMessage: '', 
       numbers: [1, 2, 3, 4, 5, 6, 7, 8, 9, 0],
-      operations: ['+', '-', '*', '/', '**'],
+      operations: ['+', '-', '*', '/'],
     };
   },
   methods: {
@@ -40,28 +41,37 @@ export default {
     },
     calc() {
       try {
-
         if (typeof this.result !== 'string') {
           throw new Error('Результат не должен быть строкой.');
         }
 
         const trimmedResult = this.result.trim();
         
-
         if (trimmedResult === '') {
           throw new Error('Пожалуйста введите выражение, например 2+2');
         }
 
-      
-        const operatorOnlyRegex = /^[+\-*/**\s]+$/;
+        const operatorOnlyRegex = /^[+\-*/\s]+$/;
 
         if (operatorOnlyRegex.test(trimmedResult)) {
           throw new Error('Введены только операторы. Пожалуйста, введите число.');
         }
 
-        const sanitizedResult = trimmedResult.replace(/[^0-9+\-*/().**]/g, ''); 
+        const consecutiveOperatorsRegex = /[+\-*\/]{2,}|(\*\*{2,})|([+\-*\/]\*\*)|(\*\*[+\-*\/])/;
+        if (consecutiveOperatorsRegex.test(trimmedResult)) {
+          throw new Error('Недопустимы последовательные операторы.');
+        }
+
+       
+        const leadingZerosRegex = /(?<!\d)0\d+|\.\d+|(?<=\s|^)\d+\.0+/g;
+        if (leadingZerosRegex.test(trimmedResult)) {
+          throw new Error('Недопустимые нули в числе.');
+        }
+
+        const sanitizedResult = trimmedResult.replace(/[^0-9+\-*/().**,]/g, '');
 
         const safeEval = (expression) => {
+          expression = expression.replace(/,/g, '.');
           const parts = expression.split(/([\+\-\*\/\*\*])/); 
           for (let i = 0; i < parts.length; i++) {
             if (parts[i] === '/') {
@@ -74,7 +84,7 @@ export default {
           return eval(expression);
         };
 
-       
+    
         this.result = safeEval(sanitizedResult).toString();
         this.errorMessage = ''; 
       } catch (error) {
@@ -128,6 +138,8 @@ export default {
     border-radius: 5px;
 }
 
+
+
 input[type="text"] {
     width: calc(100%); 
     border: 1px solid #ccc; 
@@ -176,7 +188,7 @@ input[type="text"] {
    padding: 10px; 
    border-radius: 5px; 
    background-color: rgba(255,0,0,0.1); 
-   width: calc(100% - 20px); 
+   width: calc(100%); 
    text-align: center; 
    font-size: 14px;
 }
